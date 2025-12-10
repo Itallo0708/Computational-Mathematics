@@ -195,7 +195,7 @@
       "metadata": {
         "id": "BGUzON8hQlUT"
       },
-      "execution_count": null,
+      "execution_count": 1,
       "outputs": []
     },
     {
@@ -446,7 +446,7 @@
       "metadata": {
         "id": "RoQrVOEmAXF8"
       },
-      "execution_count": null,
+      "execution_count": 2,
       "outputs": []
     },
     {
@@ -502,7 +502,7 @@
       "metadata": {
         "id": "PsUqgOosIoha"
       },
-      "execution_count": null,
+      "execution_count": 3,
       "outputs": []
     },
     {
@@ -623,7 +623,7 @@
       "metadata": {
         "id": "m5-XQFoxm-mS"
       },
-      "execution_count": null,
+      "execution_count": 4,
       "outputs": []
     },
     {
@@ -780,7 +780,7 @@
       "metadata": {
         "id": "Rt9FkFApOJob"
       },
-      "execution_count": null,
+      "execution_count": 5,
       "outputs": []
     },
     {
@@ -842,7 +842,7 @@
       "metadata": {
         "id": "H04HB-fZTpSe"
       },
-      "execution_count": null,
+      "execution_count": 6,
       "outputs": []
     },
     {
@@ -947,7 +947,7 @@
       "metadata": {
         "id": "FwhCn7phV8yP"
       },
-      "execution_count": null,
+      "execution_count": 7,
       "outputs": []
     },
     {
@@ -956,10 +956,61 @@
         "final_b3, final_w_out = training_neural_network(x_inputs, y_inputs, learning_rate=0.1, max_iterations=1000, min_step_size=0.0001, optimize_weights=False)"
       ],
       "metadata": {
-        "id": "ti9KgmFq-1rg"
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ti9KgmFq-1rg",
+        "outputId": "f9e1aa32-ad79-4553-b50d-a5d8a502739f"
       },
-      "execution_count": null,
-      "outputs": []
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "--- INÍCIO DO TREINAMENTO (LR=0.1) ---\n",
+            "Inicial -> b3: 0.0000 | w3: -1.2200 | w4: -2.3000\n",
+            "\n",
+            "--- INÍCIO DO TREINAMENTO (Otimizar Pesos: False) ---\n",
+            "\n",
+            "Iteração 1:\n",
+            "  [b3] Step Size: -1.565511 | Old: 0.000000 | New: 1.565511\n",
+            "\n",
+            "Iteração 2:\n",
+            "  [b3] Step Size: -0.626204 | Old: 1.565511 | New: 2.191715\n",
+            "\n",
+            "Iteração 3:\n",
+            "  [b3] Step Size: -0.250482 | Old: 2.191715 | New: 2.442197\n",
+            "\n",
+            "Iteração 4:\n",
+            "  [b3] Step Size: -0.100193 | Old: 2.442197 | New: 2.542390\n",
+            "\n",
+            "Iteração 5:\n",
+            "  [b3] Step Size: -0.040077 | Old: 2.542390 | New: 2.582467\n",
+            "\n",
+            "Iteração 6:\n",
+            "  [b3] Step Size: -0.016031 | Old: 2.582467 | New: 2.598498\n",
+            "\n",
+            "Iteração 7:\n",
+            "  [b3] Step Size: -0.006412 | Old: 2.598498 | New: 2.604910\n",
+            "\n",
+            "Iteração 8:\n",
+            "  [b3] Step Size: -0.002565 | Old: 2.604910 | New: 2.607475\n",
+            "\n",
+            "Iteração 9:\n",
+            "  [b3] Step Size: -0.001026 | Old: 2.607475 | New: 2.608501\n",
+            "\n",
+            "Iteração 10:\n",
+            "  [b3] Step Size: -0.000410 | Old: 2.608501 | New: 2.608911\n",
+            "\n",
+            "Iteração 11:\n",
+            "  [b3] Step Size: -0.000164 | Old: 2.608911 | New: 2.609075\n",
+            "\n",
+            "Iteração 12:\n",
+            "  [b3] Step Size: -0.000066 | Old: 2.609075 | New: 2.609141\n"
+          ]
+        }
+      ]
     }
   ]
 }
