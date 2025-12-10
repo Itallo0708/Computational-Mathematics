@@ -1,0 +1,965 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyOacZ9cNIrPfvNSvs/NT9u6",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/Itallo0708/Computational-Mathematics/blob/main/notebooks/atividade_02_no_animations\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Questão A)\n",
+        "Inicialmente importando bibliotecas e definindo funções essenciais para a execução do algoritmo do gradiente descendente.\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "hpNOUohoBh_x"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "from matplotlib.animation import FuncAnimation, PillowWriter\n",
+        "from IPython.display import HTML\n",
+        "\n",
+        "def calculate_ssr(intercept, slope, x, y):\n",
+        "    predictions = intercept + (slope * x)\n",
+        "    residuals = y - predictions\n",
+        "    ssr = np.sum(residuals ** 2)\n",
+        "    return ssr\n",
+        "\n",
+        "def gradient_descent(learning_rate, start_intercept, x, y, slope, max_iterations=40, tolerance=0.001):\n",
+        "    # Executa o algoritmo de Gradiente Descendente.\n",
+        "\n",
+        "    current_intercept = start_intercept\n",
+        "    history = []\n",
+        "\n",
+        "    print(f\"\\n INICIANDO COM LEARNING RATE = {learning_rate}\")\n",
+        "\n",
+        "    # Adiciona o estado inicial.\n",
+        "    current_ssr = calculate_ssr(current_intercept, slope, x, y)\n",
+        "\n",
+        "    # Calcula gradiente inicial.\n",
+        "    predictions = current_intercept + (slope * x)\n",
+        "    residuals = y - predictions\n",
+        "    gradient = -2 * np.sum(residuals)\n",
+        "\n",
+        "    history.append((current_intercept, current_ssr, gradient))\n",
+        "\n",
+        "    for i in range(max_iterations):\n",
+        "        # Calcular Gradiente.\n",
+        "        predictions = current_intercept + (slope * x)\n",
+        "        residuals = y - predictions\n",
+        "        gradient = -2 * np.sum(residuals)\n",
+        "\n",
+        "        # Calcular Passo.\n",
+        "        step_size = gradient * learning_rate\n",
+        "\n",
+        "        # Intercept.\n",
+        "        old_intercept = current_intercept\n",
+        "        new_intercept = old_intercept - step_size\n",
+        "        current_intercept = new_intercept\n",
+        "\n",
+        "        # Novo Erro.\n",
+        "        current_ssr = calculate_ssr(current_intercept, slope, x, y)\n",
+        "\n",
+        "        # Salvar Histórico.\n",
+        "        history.append((current_intercept, current_ssr, gradient))\n",
+        "\n",
+        "        print(f\"Iteração {i+1}: Old={old_intercept:.4f} | Grad={gradient:.4f} | Step={step_size:.4f} | New={new_intercept:.4f}\")\n",
+        "\n",
+        "        if abs(step_size) < tolerance:\n",
+        "            print(f\"--> Convergiu na iteração {i+1}!\")\n",
+        "            break\n",
+        "\n",
+        "    return history\n",
+        "\n",
+        "def setup_regression_view(ax, x_data, y_data, learning_rate):\n",
+        "    # gráfico da Reta\n",
+        "    ax.set_xlim(0, 3.5)\n",
+        "    ax.set_ylim(0, 4)\n",
+        "\n",
+        "    # Plotar dados\n",
+        "    ax.scatter(x_data, y_data, color='green', s=100, label='Dados Reais', zorder=5)\n",
+        "\n",
+        "    # objeto da reta vazio inicialmente\n",
+        "    line, = ax.plot([], [], 'b-', linewidth=3, label='Reta Prevista')\n",
+        "\n",
+        "    ax.set_title(f'Ajuste da Reta (LR={learning_rate})')\n",
+        "    ax.set_xlabel('Peso (x)')\n",
+        "    ax.set_ylabel('Altura (y)')\n",
+        "    ax.legend(loc='upper left')\n",
+        "    ax.grid(True, alpha=0.3)\n",
+        "\n",
+        "    return line\n",
+        "\n",
+        "def setup_cost_view(ax, cost_function, x_data, y_data, fixed_slope):\n",
+        "    # gráfico Curva de Custo\n",
+        "    # Gerar dados para a curva\n",
+        "    curve_x = np.linspace(-0.5, 2.5, 100)\n",
+        "    curve_y = [cost_function(b, fixed_slope, x_data, y_data) for b in curve_x]\n",
+        "\n",
+        "    # Plotar a curva\n",
+        "    ax.plot(curve_x, curve_y, 'teal', alpha=0.5, linewidth=2, label='Curva de Custo (SSR)')\n",
+        "\n",
+        "    # Configurar limites\n",
+        "    ax.set_xlim(-0.5, 2.5)\n",
+        "    ax.set_ylim(0, max(curve_y) + 1)\n",
+        "\n",
+        "    # Criar elementos móveis (inicialmente vazios)\n",
+        "    dot, = ax.plot([], [], 'ro', markersize=10, zorder=5, label='Valor Atual')\n",
+        "    track, = ax.plot([], [], 'r--', alpha=0.3) # Rastro\n",
+        "    tangent_line, = ax.plot([], [], 'orange', linewidth=2, label='Derivada')\n",
+        "\n",
+        "    # Caixa de texto informativa\n",
+        "    info_text = ax.text(0.5, 0.85, '', transform=ax.transAxes, ha='right',\n",
+        "                        bbox=dict(boxstyle=\"round\", facecolor='white', alpha=0.8))\n",
+        "\n",
+        "    ax.set_title('Descida do Gradiente')\n",
+        "    ax.set_xlabel('Intercepto')\n",
+        "    ax.set_ylabel('Erro (SSR)')\n",
+        "    ax.legend(loc='upper right')\n",
+        "    ax.grid(True, alpha=0.3)\n",
+        "\n",
+        "    return dot, track, tangent_line, info_text\n",
+        "\n",
+        "def create_animation(history, x_data, y_data, fixed_slope, learning_rate):\n",
+        "    # montar a figura e a animação\n",
+        "\n",
+        "    # Criar Figura e Eixos\n",
+        "    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))\n",
+        "    plt.subplots_adjust(wspace=0.3)\n",
+        "\n",
+        "    line_reg = setup_regression_view(ax1, x_data, y_data, learning_rate)\n",
+        "\n",
+        "    dot, track, tangent, info_txt = setup_cost_view(ax2, calculate_ssr, x_data, y_data, fixed_slope)\n",
+        "\n",
+        "    def update(frame):\n",
+        "        # Pegando dados\n",
+        "        b, ssr, grad = history[frame]\n",
+        "\n",
+        "        # Atualizar reta\n",
+        "        x_vals = np.array([0, 3.5])\n",
+        "        y_vals = b + (fixed_slope * x_vals)\n",
+        "        line_reg.set_data(x_vals, y_vals)\n",
+        "\n",
+        "        # Atualizar curva\n",
+        "        history_x = [h[0] for h in history[:frame+1]]\n",
+        "        history_y = [h[1] for h in history[:frame+1]]\n",
+        "\n",
+        "        dot.set_data([b], [ssr])\n",
+        "        track.set_data(history_x, history_y)\n",
+        "\n",
+        "        # Atualizar Tangente\n",
+        "        tan_range = 0.6\n",
+        "        x_tan = np.linspace(b - tan_range/2, b + tan_range/2, 10)\n",
+        "        y_tan = grad * (x_tan - b) + ssr\n",
+        "        tangent.set_data(x_tan, y_tan)\n",
+        "\n",
+        "        # Atualizar Texto\n",
+        "        info_txt.set_text(\n",
+        "            f'Iteração: {frame}\\nIntercepto: {b:.2f}\\nErro: {ssr:.2f}\\nGrad: {grad:.2f}'\n",
+        "        )\n",
+        "\n",
+        "        return line_reg, dot, track, tangent, info_txt\n",
+        "    ani = FuncAnimation(fig, update, frames=len(history), blit=True, interval=150)\n",
+        "    return ani\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "BGUzON8hQlUT"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Gradiente Descendente\n",
+        "O objetivo desse código foi fazer uso do algoritmo de Gradiente Descendente para ajustar um modelo de Regressão Linear Simples, o qual tem a finalidade de encontrar o melhor valor do intercept (*b*) , nesse caso, mantendo constante o coeficiente angular (*m*).\n",
+        "\n",
+        "Nesse cenário, temos que a reta da regressão linear, técnica a qual visa traçar uma reta que represente de forma eficiente o conjunto de dados, se dá por:\n",
+        "$$\n",
+        "y_{\\text{pred}} = m \\cdot x + b\n",
+        "$$\n",
+        "Nesse caso iremos fixar o *m* = 0.64 e iremos usar o gradiente descendente para otimizar o valor de *b*.\n",
+        "# Função de custo (Loss Function)\n",
+        "Para o processo de otimização, é essencial calcular o erro do modelo de previsão, isto é, o quão distante a reta estimada está dos pontos reais. Nesse contexto, a função de custo representa matematicamente essa distância entre os valores previstos pelo modelo e os valores observados nos dados.\n",
+        "\n",
+        "Para isso, utilizamos a Soma dos Resíduos ao Quadrado (*SSR*), que se dá por:\n",
+        "$$\n",
+        "f(b) = \\sum_{i=1}^{n} \\left( y_{\\text{real}}^{(i)} - (m \\cdot x^{(i)} + b) \\right)^2\n",
+        "$$\n",
+        "Visualmente, esta função forma uma parábola convexa, onde o ponto mínimo representa o intercepto ideal.\n",
+        "# Calculo do Gradiente (Derivada)\n",
+        "Para minimizar $f(b)$, calculamos a derivada da função de custo em relação ao intercepto $b$. Pela regra da cadeia, a derivada é:\n",
+        "$$\\frac{df}{db} = -2 \\sum_{i=1}^{n} (y_{real}^{(i)} - y_{pred}^{(i)})$$\n",
+        "Este valor nos indica a inclinação da curva de custo e a direção para onde devemos ajustar $b$\n",
+        "# Step Size\n",
+        "Uma vez calculada a derivada (gradiente), sabemos a direção para onde o erro diminui, mas ainda precisamos definir o tamanho do ajuste a ser feito no intercepto. É aqui que entra a Taxa de Aprendizado.\n",
+        "\n",
+        "O tamanho real do passo (Step Size) que o algoritmo dá em cada iteração é o produto da derivada pela taxa de aprendizado:\n",
+        "$$\\text{Step Size} = \\text{Gradiente} \\times \\ learning \\ rate$$\n",
+        "Este mecanismo cria um comportamento autoajustável, o qual, quando o erro é alto, a curva é íngreme (gradiente alto), gerando passos grandes para avançar rápido.\n",
+        "\n",
+        "Por outro lado, conforme nos aproximamos do fundo da parábola, a inclinação diminui (gradiente baixo), gerando passos cada vez menores (\"baby steps\") para evitar ultrapassar o ponto ótimo e garantir uma convergência precisa.\n",
+        "\n",
+        "Dessa forma, o novo valor do intercept $b$ será de:\n",
+        "$$b_{\\text{novo}} = b_{\\text{atual}} - \\underbrace{(\\text{Gradiente} \\times \\ lerning \\ rate)}_{\\text{Step Size}}$$\n",
+        "\n",
+        "# Convergência e critério de parada\n",
+        "O processo de otimização descrito acima é iterativo. O algoritmo repete os passos de cálculo do gradiente e atualização do intercepto sucessivas vezes.\n",
+        "\n",
+        "inicialmente, por estarmos longe do ideal, a inclinação da curva é acentuada (gradiente alto em magnitude), o que resulta em passos largos ($StepSize$ grande) para avançar rapidamente.\n",
+        "\n",
+        "No processo de aproximação, conforme o intercept desliza em direção ao fundo da parábola, a curva se torna menos íngreme. O valor do gradiente diminui naturalmente.\n",
+        "\n",
+        "No ponto exato onde o erro é mínimo, a reta tangente é perfeitamente horizontal. Matematicamente, isso significa que a derivada é zero ($\\frac{df}{db} = 0$).\n",
+        "\n",
+        "Na prática, é  raro atingirmos o zero absoluto devido à precisão de ponto flutuante. Portanto, definimos um critério de convergência no qual o algoritmo para quando o tamanho do passo ($StepSize$) se torna menor que uma tolerância pré-definida."
+      ],
+      "metadata": {
+        "id": "G37J9IlkEJdB"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Exemplo 1: learning hate = 0.01\n",
+        "Nesse cenário, usaremos os pontos:\n",
+        "\n",
+        "Ponto 1: $x=0.5, y=1.4$\n",
+        "\n",
+        "Ponto 2: $x=2.3, y=1.9$\n",
+        "\n",
+        "Ponto 3: $x=2.9, y=3.2$\n",
+        "\n",
+        "assumimos que a inclinação da reta (o coeficiente angular $m$) é conhecida e fixa em 0.64. Nosso objetivo é descobrir onde a reta deve cruzar o eixo vertical (o intercept $b$).\n",
+        "\n",
+        "Começando com um chute arbitrário de que o intercepto é 0. A reta prevista é $$y = 0.64x + 0$$\n",
+        "Aplicando os valores previstos na reta na fórmula do custo temos:\n",
+        "$$f(b) = \\sum_{i=1}^{n} \\left( y_{\\text{real}}^{(i)} - (0.64 \\cdot x^{(i)} + 0) \\right)^2 = 3.15$$\n",
+        "Concluindo que a reta passa distante dos pontos.\n",
+        "\n",
+        "Aplicando o cálculo do gradiente temos:\n",
+        "$$\\frac{df}{db} = -2 \\sum_{i=1}^{n} (y_{real}^{(i)} - y_{pred}^{(i)}) = -5.7$$\n",
+        "Assim, tem-se uma forte inclinação descendente indicando que o ponto está à esquerda do ponto ótimo.\n",
+        "\n",
+        "Em seguida, o algoritmo usa o gradiente para calcular o próximo passo:\n",
+        "$$\\text{Step Size} = \\text{Gradiente} (-5.7) \\times \\text{Taxa de Aprendizado} (0.01) = -0.057$$\n",
+        "E com isso ajusta o valor do novo intercept:\n",
+        "$$b_{new} = b_{0} - \\text{(-0.057)}$$\n",
+        "\n",
+        "Desse modo, o processo se repete até que o gradiente seja praticamente nulo, a reta tangente no gráfico da direita fica horizontal. No nosso exemplo, isso ocorre próximo ao valor de 0.87. Neste ponto, atingimos o Mínimo Global da função de custo para este conjunto de dados. A reta $y = 0.64x + 0.87$ é a melhor aproximação linear possível para representar a relação entre Peso e Altura nestas observações.\n"
+      ],
+      "metadata": {
+        "id": "FjkzAxi5ZE8B"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Dados.\n",
+        "weights = np.array([0.5, 2.3, 2.9])\n",
+        "heights_real = np.array([1.4, 1.9, 3.2])\n",
+        "fixed_slope = 0.64\n",
+        "\n",
+        "history_data = gradient_descent(0.01, 0, weights, heights_real, fixed_slope)\n",
+        "animacao = create_animation(history_data, weights, heights_real, fixed_slope, 0.01)\n",
+        "\n",
+        "HTML(animacao.to_jshtml())"
+      ],
+      "metadata": {
+        "id": "XEMP32EYBCLi"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Exemplo 2: Learning rate = 0.05\n",
+        "\n",
+        "No exemplo a seguir foram mantidos os mesmos dados com a exceção do learning rate que inicialmente era *0.01* e agora será de *0.05*.\n",
+        "\n",
+        "Assim, ao executar o mesmo algoritmo, mas agora em um cenário com um learning hate consideravelmente maior, temos que o gradiente converge a 0 muito mais rapidamente, pois com um learning rate maior o algoritmo consegue chegar em um valor melhor de intercept em menos interações.\n"
+      ],
+      "metadata": {
+        "id": "LsHmDij-g4as"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "history_data = gradient_descent(0.05, 0, weights, heights_real, fixed_slope)\n",
+        "animacao = create_animation(history_data, weights, heights_real, fixed_slope, 0.05)\n",
+        "\n",
+        "HTML(animacao.to_jshtml())"
+      ],
+      "metadata": {
+        "id": "LZuwwngIhH2j"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Questão B)\n",
+        "Adaptando a função usada anteriormente para executar o algoritmo com intercept e slope variando."
+      ],
+      "metadata": {
+        "id": "ibJ1xa63jISE"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def gradient_descent_two_parameters(learning_rate, start_intercept, x, y, start_slope, max_iterations=40, tolerance=0.001):\n",
+        "    # Executa o algoritmo de Gradiente Descendente.\n",
+        "\n",
+        "    current_intercept = start_intercept\n",
+        "    current_slope = start_slope\n",
+        "    history = []\n",
+        "\n",
+        "    print(f\"\\n INICIANDO COM LEARNING RATE = {learning_rate}\")\n",
+        "\n",
+        "    # Adiciona o estado inicial.\n",
+        "    current_ssr = calculate_ssr(current_intercept, current_slope, x, y)\n",
+        "\n",
+        "    # Calcula gradiente inicial.\n",
+        "    predictions = current_intercept + (current_slope * x)\n",
+        "    residuals = y - predictions\n",
+        "    d_intercept = -2 * np.sum(residuals)\n",
+        "    d_slope = -2 * np.sum(residuals * x)\n",
+        "\n",
+        "    history.append((current_intercept, current_ssr, d_intercept, d_slope))\n",
+        "\n",
+        "    for i in range(max_iterations):\n",
+        "        # Calcular Gradiente.\n",
+        "        predictions = current_intercept + (current_slope * x)\n",
+        "        residuals = y - predictions\n",
+        "        d_intercept = -2 * np.sum(residuals)\n",
+        "        d_slope = -2 * np.sum(residuals * x)\n",
+        "\n",
+        "        # Calcular Passo.\n",
+        "        step_size_intercept = d_intercept * learning_rate\n",
+        "        step_size_slope = d_slope * learning_rate\n",
+        "\n",
+        "        # Intercept.\n",
+        "        old_intercept = current_intercept\n",
+        "        new_intercept = old_intercept - step_size_intercept\n",
+        "        current_intercept = new_intercept\n",
+        "\n",
+        "        # slope.\n",
+        "        old_slope = current_slope\n",
+        "        new_slope = old_slope - step_size_slope\n",
+        "        current_slope = new_slope\n",
+        "\n",
+        "        # Novo Erro.\n",
+        "        current_ssr = calculate_ssr(current_intercept, current_slope, x, y)\n",
+        "\n",
+        "        # Salvar Histórico.\n",
+        "        history.append((current_intercept, current_ssr, d_intercept, d_slope))\n",
+        "\n",
+        "        print(f\"Iteração {i+1}: Old i={old_intercept:.4f} | old s={old_slope:.4f} | d/di={d_intercept:.4f} |d/ds={d_slope:.4f} | Step i={step_size_intercept:.4f} |step s={step_size_slope:.4f} | New i={new_intercept:.4f} | New s={new_slope:.4f}\")\n",
+        "\n",
+        "        if abs(step_size_intercept) < tolerance and abs(step_size_slope) < tolerance:\n",
+        "            print(f\"--> Convergiu na iteração {i+1}!\")\n",
+        "            break\n",
+        "\n",
+        "    return history\n",
+        "\n",
+        "def create_line_animation_two_parameters(history, x_data, y_data, learning_rate, title=\"\"):\n",
+        "    # 1. Criar Figura\n",
+        "    fig, ax = plt.subplots(figsize=(8, 6))\n",
+        "    ax.set_xlim(0, 3.5)\n",
+        "    ax.set_ylim(0, 4)\n",
+        "\n",
+        "    # Plotar os dados\n",
+        "    ax.scatter(x_data, y_data, color='green', s=100, label='Dados Reais', zorder=5)\n",
+        "\n",
+        "    # Criar a linha da reta\n",
+        "    line_reg, = ax.plot([], [], 'b-', linewidth=3, label='Reta Prevista')\n",
+        "\n",
+        "    # Caixa de texto para mostrar os valores\n",
+        "    info_text = ax.text(0.05, 0.8, '', transform=ax.transAxes, ha='left',\n",
+        "                        bbox=dict(boxstyle=\"round\", facecolor='white', alpha=0.8))\n",
+        "\n",
+        "    ax.set_title(f'{title} com (LR={learning_rate})')\n",
+        "    ax.set_xlabel('Peso (x)')\n",
+        "    ax.set_ylabel('Altura (y)')\n",
+        "    ax.legend(loc='lower right')\n",
+        "    ax.grid(True, alpha=0.3)\n",
+        "\n",
+        "    # Função de Atualização\n",
+        "    def update(frame):\n",
+        "        b, m, gb, gm = history[frame]\n",
+        "        x_vals = np.array([0, 3.5])\n",
+        "        y_vals = b + (m * x_vals)\n",
+        "\n",
+        "        # Atualizar o gráfico\n",
+        "        line_reg.set_data(x_vals, y_vals)\n",
+        "\n",
+        "        # Atualizar o texto com os valores\n",
+        "        info_text.set_text(\n",
+        "            f'Iteração: {frame}\\n'\n",
+        "            f'b (Intercept): {b:.2f}\\n'\n",
+        "            f'm (Slope): {m:.2f}\\n'\n",
+        "            f'gradient intercept : {gb:.2f}\\n'\n",
+        "            f'gradient slope: {gm:.2f}'\n",
+        "        )\n",
+        "\n",
+        "        return line_reg, info_text\n",
+        "\n",
+        "    # Criar Animação\n",
+        "    ani = FuncAnimation(fig, update, frames=len(history), blit=True, interval=100)\n",
+        "\n",
+        "    return ani"
+      ],
+      "metadata": {
+        "id": "RoQrVOEmAXF8"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Exemplo 1: Learning Rate = 0.01\n",
+        "Nesse exemplo iremos ultilizar os mesmos valores da questão anterior, com o diferencial de que o slope não será fixo.\n",
+        "\n",
+        "Inicialmente escolheremos o $intercept$ como $b = 0$, e o $slope$ como $m = 1$.\n",
+        "\n",
+        "A reta prevista é $$y = 1x + 0$$\n",
+        "\n",
+        "E a Soma dos Erros ao Quadrado será $$f(b) = \\sum_{i=1}^{n} \\left( y_{\\text{real}}^{(i)} - (1 \\cdot x^{(i)} + 0) \\right)^2 = 1.06$$\n",
+        "Concluindo que a reta passa distante dos pontos.\n",
+        "\n",
+        "Nesse contexto, com 2 parâmetros, a principal mudança é que faremos uma derivada em relação ao $intercept$:\n",
+        "$$\n",
+        "\\frac{\\partial \\text{SSR}}{\\partial b}\n",
+        "=\n",
+        "-2 \\sum_{i=1}^{n} \\left( y_i - (b + m x_i) \\right)\n",
+        "$$\n",
+        "\n",
+        "E outra em relação ao $slope$:\n",
+        "$$\n",
+        "\\frac{\\partial \\text{SSR}}{\\partial m}\n",
+        "=\n",
+        "-2 \\sum_{i=1}^{n} x_i \\left( y_i - (b + m x_i) \\right)\n",
+        "$$\n",
+        "\n",
+        "Após essa etapa teremos o tamanho do passo para o novo $intercept$:\n",
+        "$$ step\\ size\\ intercept =\\frac{\\partial \\text{SSR}}{\\partial b} \\ learning \\ rate$$\n",
+        "Novo $intercept$:\n",
+        "$$ intercept \\ novo = intercept - \\ step \\ size\\ intercept$$\n",
+        "\n",
+        "E teremos o tamanho do passo para o novo $intercept$:\n",
+        "$$ step\\ size\\ slope =\\frac{\\partial \\text{SSR}}{\\partial m} \\ learning \\ rate$$\n",
+        "\n",
+        "Novo $slope$:\n",
+        "$$ slope \\ novo = slope - \\ step \\ size\\ slope$$\n",
+        "\n",
+        "Dessa forma, a cada iteração do algoritmo os valores de $intercept$ e $slope$ vão sendo ajustados, e os gradientes de ambos os parâmetros devem se aproximar de 0, objetivando o menor valor possível de inclinação da reta tangente para ambos os parâmetros."
+      ],
+      "metadata": {
+        "id": "KvCsMwRaH5TS"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "weights = np.array([0.5, 2.3, 2.9])\n",
+        "heights_real = np.array([1.4, 1.9, 3.2])"
+      ],
+      "metadata": {
+        "id": "PsUqgOosIoha"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "teste = gradient_descent_two_parameters(0.01, 0, weights, heights_real, 1, max_iterations=40, tolerance=0.001 )\n",
+        "animacao_b = create_line_animation_two_parameters(teste, weights, heights_real, 0.01, \"Regressão com 2 Parâmetros\")\n",
+        "HTML(animacao_b.to_jshtml())"
+      ],
+      "metadata": {
+        "id": "YMsGgps1H9Qh"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Exemplo: Learning rate = 0.05\n",
+        "Ademais, aplicando o mesmo algoritmo a uma taxa de aprendizado maior iremos obter o seguinte resultado:"
+      ],
+      "metadata": {
+        "id": "hhKjOCnCsWs9"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "exemplo4 = gradient_descent_two_parameters(0.05, 0, weights, heights_real, 1, max_iterations=40, tolerance=0.001 )\n",
+        "animacao_exemplo4= create_line_animation_two_parameters(teste, weights, heights_real, 0.05, \"Regressão com 2 Parâmetros\")\n",
+        "HTML(animacao_exemplo4.to_jshtml())"
+      ],
+      "metadata": {
+        "id": "ghS3OrYAslS8"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "No experimento, o gradiente descendente que ajusta apenas o intercepto 𝑏 convergiu mais rápido do que a versão que ajusta simultaneamente 𝑏 e o slope 𝑚, pois o valor inicial do slope já estava muito próximo do ótimo ($𝑚≈0,64$). Como a inclinação já estava ajustada no início, o algoritmo precisou apenas realizar pequenos deslocamentos verticais para reduzir o erro.\n",
+        "\n",
+        "Nesse caso específico, o chute inicial ter sido distante do valor ótimo acabou aumentando o número de iterações, no entanto, em termos gerais, a otimização simultânea de todos os parâmetros nos daria um erro menor, visto que a reta poderia ser ajustada tanto em altura, quanto em inclinação em cenários desfavoráveis."
+      ],
+      "metadata": {
+        "id": "-p5cWUZ1uvEM"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Gradiente Descendente Estocástico\n",
+        "Adaptando o código para um modelo estocástico temos:"
+      ],
+      "metadata": {
+        "id": "S7Aiv61Hv1t9"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def stochastic_gradient_descent(learning_rate, start_intercept, x, y, start_slope, max_iterations=40, tolerance=0.001):\n",
+        "    # Executa o algoritmo de Gradiente Descendente.\n",
+        "\n",
+        "    current_intercept = start_intercept\n",
+        "    current_slope = start_slope\n",
+        "    history = []\n",
+        "\n",
+        "    print(f\"\\n INICIANDO SGD COM LEARNING RATE = {learning_rate}\")\n",
+        "\n",
+        "    # Adiciona o estado inicial.\n",
+        "    current_ssr = calculate_ssr(current_intercept, current_slope, x, y)\n",
+        "    history.append((current_intercept, current_ssr, 0, 0))\n",
+        "\n",
+        "    for i in range(max_iterations):\n",
+        "      # sorteio\n",
+        "      random_index = np.random.randint(0, len(x))\n",
+        "      x_i = x[random_index]\n",
+        "      y_i = y[random_index]\n",
+        "\n",
+        "      # calcular predict e erro\n",
+        "      predictions = current_intercept + (current_slope * x_i)\n",
+        "      residuals = y_i - predictions\n",
+        "\n",
+        "      # gradiente\n",
+        "      d_intercept = -2 * residuals\n",
+        "      d_slope = -2 * residuals * x_i\n",
+        "\n",
+        "      # Calcular Passo.\n",
+        "      step_size_intercept = d_intercept * learning_rate\n",
+        "      step_size_slope = d_slope * learning_rate\n",
+        "\n",
+        "      # Intercept.\n",
+        "      old_intercept = current_intercept\n",
+        "      new_intercept = old_intercept - step_size_intercept\n",
+        "      current_intercept = new_intercept\n",
+        "\n",
+        "      # slope.\n",
+        "      old_slope = current_slope\n",
+        "      new_slope = old_slope - step_size_slope\n",
+        "      current_slope = new_slope\n",
+        "\n",
+        "      # Novo Erro.\n",
+        "      current_ssr = calculate_ssr(current_intercept, current_slope, x, y)\n",
+        "\n",
+        "      # Salvar Histórico.\n",
+        "      history.append((current_intercept, current_ssr, d_intercept, d_slope))\n",
+        "\n",
+        "      print(f\"Iteração {i+1}: ponto:{random_index} | Old i={old_intercept:.4f} | old s={old_slope:.4f} | d/di={d_intercept:.4f} |d/ds={d_slope:.4f} | Step i={step_size_intercept:.4f} |step s={step_size_slope:.4f} | New i={new_intercept:.4f} | New s={new_slope:.4f}\")\n",
+        "\n",
+        "      if abs(step_size_intercept) < tolerance and abs(step_size_slope) < tolerance:\n",
+        "          print(f\"--> Convergiu na iteração {i+1}!\")\n",
+        "          break\n",
+        "\n",
+        "    return history"
+      ],
+      "metadata": {
+        "id": "m5-XQFoxm-mS"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Diferenças Para o Gradiente Descendente Tradicional\n",
+        "No Gradiente Descendente padrão, para dar um único passo, o algoritmo precisa:\n",
+        "Calcular o erro de todos os pontos de dados. Somar todos esses erros, calcular a derivada do somátorio dos erros ao quadrado, e só então atualizar o $intercept$ e o $slope$.\n",
+        "\n",
+        "Nesse contexto, A ideia do Estocástico é em vez de olhar para todos os dados para dar um passo, vamos sortear apenas ponto de dado e usar ele para decidir a direção.\n",
+        "\n",
+        "# Algoritmo\n",
+        "Começamos com valores aleatórios, por exemplo, $Intercept=0$, $Slope=1$, igual ao método tradicional. Em seguida, ao invés de calcularmos o erro em todos os pontos, escolhe-se um ponto de forma aleatória e executa-se o cálculo da derivada com base apenas nesse ponto.\n",
+        "\n",
+        "Com isso temos que a derivada em relação ao $Interept$ é:\n",
+        "$$\n",
+        "Gradiente_{intercept} = -2(y_{real} - y_{pred})\n",
+        "$$\n",
+        "E a atualização do $Intercept$ se dá por:\n",
+        "$$\n",
+        "Intercept_{novo} = Intercept_{velho} - (Learning Rate \\times Gradiente)\n",
+        "$$\n",
+        "Com isso temos que a derivada em relação ao $Slope$ é:\n",
+        "$$\n",
+        "Gradiente_{slope} = -2(y_{real} - y_{pred})x\n",
+        "$$\n",
+        "E a atualização do $Slope$ se dá por:\n",
+        "$$\n",
+        "Slope_{novo} = Slope_{velho} - (Learning Rate \\times Gradiente)\n",
+        "$$\n",
+        "\n",
+        "Dessa maneira, após o cálculo do novo $Intercept$ e $Slope$, outro ponto é sorteado e o processo é repetido até alcançarmos uma condição de parada, no caso, iremos definir um limite de iterações e um tamanho mínimo do passo."
+      ],
+      "metadata": {
+        "id": "cMLPRTMLwO2b"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Exemplo: Gradiente Estocástico com Learning Rate = 0.05\n",
+        "Nesse exemplo, iniciamos com um chute inicial para o $Intercept = 0$ e $ Slope = 1$"
+      ],
+      "metadata": {
+        "id": "iwyl7QbT03d5"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "exemplo5 = stochastic_gradient_descent(0.05, 0, weights, heights_real, 1, max_iterations=40, tolerance=0.001 )\n",
+        "animacao_5 = create_line_animation_two_parameters(exemplo5, weights, heights_real, 0.05, \"Gradiente Descendente Estocástico\")\n",
+        "HTML(animacao_5.to_jshtml())"
+      ],
+      "metadata": {
+        "id": "aBwSg9yJsRFg"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Mini-Batch de 2 samples\n",
+        "No Gradiente Descendente Mini-Batch, para dar um único passo, o algoritmo precisa sortear um pequeno subconjunto dos dados, no nosso caso, 2 pontos. Calcular o erro desses dois pontos, somar esses erros, calcular a derivada do somatório dos erros ao quadrado, e então atualizar o $Intercept$ e o $Slope$.\n",
+        "\n",
+        "Nesse contexto, a ideia do Mini-Batch de 2 samples é que, ao invés de olhar para todos os dados, como no método padrão, ou para apenas um ponto, como no estocástico, utilizamos dois pontos por iteração para decidir a direção de atualização. Isso torna o método mais estável que o estocástico e mais rápido que o gradiente descendente tradicional.\n",
+        "\n",
+        "#Algoritmo\n",
+        "Começamos com valores iniciais, por exemplo, $Intercept = 0$, $Slope = 1$, igual aos outros métodos. Em seguida, ao invés de calcularmos o erro em todos os pontos, sorteiam-se dois pontos de forma aleatória e executa-se o cálculo da derivada com base apenas nesses dois pontos.\n",
+        "\n",
+        "Com isso temos que a derivada em relação ao $Intercept$ é:\n",
+        "$$\n",
+        "Gradiente_{intercept} = -2 \\sum_{i=1}^{2} \\left( y_{real}^{(i)} - y_{pred}^{(i)} \\right)\n",
+        "$$\n",
+        "E a atualização do $Intercept$ se dá por:\n",
+        "$$\n",
+        "Intercept_{novo} = Intercept_{velho} - (Learning\\ Rate \\times Gradiente_{intercept})\n",
+        "$$\n",
+        "\n",
+        "Com isso temos que a derivada em relação ao $Slope$ é:\n",
+        "$$\n",
+        "Gradiente_{slope} = -2 \\sum_{i=1}^{2} \\left( y_{real}^{(i)} - y_{pred}^{(i)} \\right)x^{(i)}\n",
+        "$$\n",
+        "E a atualização do $Slope$ se dá por:\n",
+        "$$\n",
+        "Slope_{novo} = Slope_{velho} - (Learning\\ Rate \\times Gradiente_{slope})\n",
+        "$$\n",
+        "\n",
+        "Dessa maneira, após o cálculo do novo $Intercept$ e $Slope$, outro mini-batch contendo dois novos pontos é sorteado e o processo é repetido até alcançarmos uma condição de parada, que pode ser definida por um limite de iterações, por um erro mínimo aceitável ou por um tamanho mínimo do passo."
+      ],
+      "metadata": {
+        "id": "k4cLZdCvJuFY"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def mini_batch(learning_rate, start_intercept, x, y, start_slope, max_iterations=40, tolerance=0.001, sample=2):\n",
+        "    # Executa o algoritmo de Gradiente Descendente.\n",
+        "\n",
+        "    current_intercept = start_intercept\n",
+        "    current_slope = start_slope\n",
+        "    history = []\n",
+        "\n",
+        "    print(f\"\\n INICIANDO SGD COM LEARNING RATE = {learning_rate}\")\n",
+        "\n",
+        "    # Adiciona o estado inicial.\n",
+        "    current_ssr = calculate_ssr(current_intercept, current_slope, x, y)\n",
+        "    history.append((current_intercept, current_ssr, 0, 0))\n",
+        "\n",
+        "    for i in range(max_iterations):\n",
+        "      # sorteio\n",
+        "      random_index = np.random.choice(len(x), size=sample, replace=False)\n",
+        "      x_i = x[random_index]\n",
+        "      y_i = y[random_index]\n",
+        "\n",
+        "      # calcular predict e erro\n",
+        "      predictions = current_intercept + (current_slope * x_i)\n",
+        "      residuals = y_i - predictions\n",
+        "\n",
+        "      # gradiente\n",
+        "      d_intercept = -2 * np.sum(residuals)\n",
+        "      d_slope = -2 * np.sum(residuals * x_i)\n",
+        "\n",
+        "      # Calcular Passo.\n",
+        "      step_size_intercept = d_intercept * learning_rate\n",
+        "      step_size_slope = d_slope * learning_rate\n",
+        "\n",
+        "      # Intercept.\n",
+        "      old_intercept = current_intercept\n",
+        "      new_intercept = old_intercept - step_size_intercept\n",
+        "      current_intercept = new_intercept\n",
+        "\n",
+        "      # slope.\n",
+        "      old_slope = current_slope\n",
+        "      new_slope = old_slope - step_size_slope\n",
+        "      current_slope = new_slope\n",
+        "\n",
+        "      # Novo Erro.\n",
+        "      current_ssr = calculate_ssr(current_intercept, current_slope, x, y)\n",
+        "\n",
+        "      # Salvar Histórico.\n",
+        "      history.append((current_intercept, current_ssr, d_intercept, d_slope))\n",
+        "\n",
+        "      print(f\"Iteração {i+1}: Old i={old_intercept:.4f} | old s={old_slope:.4f} | d/di={d_intercept:.4f} |d/ds={d_slope:.4f} | Step i={step_size_intercept:.4f} |step s={step_size_slope:.4f} | New i={new_intercept:.4f} | New s={new_slope:.4f}\")\n",
+        "\n",
+        "      if abs(step_size_intercept) < tolerance and abs(step_size_slope) < tolerance:\n",
+        "          print(f\"--> Convergiu na iteração {i+1}!\")\n",
+        "          break\n",
+        "\n",
+        "    return history"
+      ],
+      "metadata": {
+        "id": "Rt9FkFApOJob"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Exemplo 06: Mini-Batch de 2 Samples\n",
+        "Nesse exemplo, iniciamos com um chute inicial para o  Intercept=0  e  Slope=1"
+      ],
+      "metadata": {
+        "id": "H9e3NwM1R5sl"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "exemplo6 = mini_batch(0.05, 0, weights, heights_real, 1, max_iterations=1000, tolerance=0.001, sample=2 )\n",
+        "animacao_6 = create_line_animation_two_parameters(exemplo6, weights, heights_real, 0.05, \"Mini-Batch de 2 samples\")\n",
+        "HTML(animacao_6.to_jshtml())"
+      ],
+      "metadata": {
+        "id": "lO6C-M1GSezM"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "No $Mini-Batch$ de 2 samples, o uso de dois pontos por iteração proporciona uma estimativa de gradiente mais estável que a do estocástico, suavizando as oscilações nas atualizações do $Intercept$ e do $Slope$. Como consequência, a convergência ocorre de forma mais regular, mantendo boa velocidade de aprendizado sem perder estabilidade."
+      ],
+      "metadata": {
+        "id": "pHHkWuvBXAH7"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Redes Neurais.\n"
+      ],
+      "metadata": {
+        "id": "klkqgdLYXvKy"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Função de ativação."
+      ],
+      "metadata": {
+        "id": "bWjVrTG0Ver_"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "def activation_function(x):\n",
+        "  return np.log(1+ np.exp(x))"
+      ],
+      "metadata": {
+        "id": "H04HB-fZTpSe"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Redes neurais"
+      ],
+      "metadata": {
+        "id": "rBNf3sjzV58n"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# valores observados\n",
+        "x_inputs = np.array([0, 0.5, 1])\n",
+        "y_inputs = np.array([0, 1, 0])\n",
+        "\n",
+        "def neural_network(learning_rate = .1, max_iterations = 1000, min_step_size = 0.0001, optimize_weights = False):\n",
+        "  # weights\n",
+        "  weights_before_activation = np.array([[3.34], [-3.53]])\n",
+        "  weights_after_activation = np.array([[-1.22], [-2.30]])\n",
+        "  if optimize_weights:\n",
+        "    weights_after_activation = np.array([[0.36], [0.63]])\n",
+        "  # bias\n",
+        "  bias_before_activation = np.array([[-1.43], [0.57]])\n",
+        "  bias_after_activation = np.array([[0.0]])\n",
+        "\n",
+        "  return weights_before_activation, weights_after_activation, bias_before_activation, bias_after_activation\n",
+        "\n",
+        "def predict_values(x_inputs, weights_before_activation, weights_after_activation, bias_before_activation, bias_after_activation):\n",
+        "  activation_function_inputs = x_inputs * weights_before_activation + bias_before_activation\n",
+        "  activation_function_outputs = activation_function(activation_function_inputs)\n",
+        "  predictions = np.sum(activation_function_outputs * weights_after_activation, axis=0) + bias_after_activation\n",
+        "  return predictions, activation_function_outputs\n",
+        "\n",
+        "def evaluate_residual(y_inputs, predctions):\n",
+        "  residuals = y_inputs - predctions\n",
+        "  return residuals\n",
+        "\n",
+        "def derivative_ssr_b3(residuals):\n",
+        "  return -2 * np.sum(residuals)\n",
+        "\n",
+        "def derivative_ssr_w3(residuals, activation_function_outputs):\n",
+        "  return -2 * np.sum(residuals * activation_function_outputs[0])\n",
+        "\n",
+        "def derivative_ssr_w4(residuals, activation_function_outputs):\n",
+        "  return -2 * np.sum(residuals * activation_function_outputs[1])\n",
+        "\n",
+        "def training_neural_network(x_inputs, y_inputs, learning_rate=0.1, max_iterations=1000, min_step_size=0.0001, optimize_weights=False):\n",
+        "  w_in, w_out,b_in ,b_3 = neural_network(optimize_weights= optimize_weights)\n",
+        "\n",
+        "  print(f\"--- INÍCIO DO TREINAMENTO (LR={learning_rate}) ---\")\n",
+        "  print(f\"Inicial -> b3: {b_3[0][0]:.4f} | w3: {w_out[0][0]:.4f} | w4: {w_out[1][0]:.4f}\\n\")\n",
+        "\n",
+        "  print(f\"--- INÍCIO DO TREINAMENTO (Otimizar Pesos: {optimize_weights}) ---\")\n",
+        "\n",
+        "  for i in range(max_iterations):\n",
+        "    predictions, softplus_outs = predict_values(x_inputs, w_in, w_out, b_in, b_3)\n",
+        "\n",
+        "    residuals = evaluate_residual(y_inputs, predictions)\n",
+        "\n",
+        "    gradient_b3 = derivative_ssr_b3(residuals)\n",
+        "    step_b3 = gradient_b3 * learning_rate\n",
+        "    print(f\"\\nIteração {i+1}:\")\n",
+        "    old_b3 = b_3[0][0]\n",
+        "    b_3 = b_3 - step_b3\n",
+        "    new_b3 = b_3[0][0]\n",
+        "    print(f\"  [b3] Step Size: {step_b3:.6f} | Old: {old_b3:.6f} | New: {new_b3:.6f}\")\n",
+        "\n",
+        "    if optimize_weights:\n",
+        "      gradient_w3 = derivative_ssr_w3(residuals, softplus_outs[0])\n",
+        "      gradient_w4 = derivative_ssr_w4(residuals, softplus_outs[1])\n",
+        "\n",
+        "      step_w3 = gradient_w3 * learning_rate\n",
+        "      step_w4 = gradient_w4 * learning_rate\n",
+        "\n",
+        "      old_w3 = w_out[0][0]\n",
+        "      w_out[0][0] = w_out[0][0] - step_w3\n",
+        "      new_w3 = w_out[0][0]\n",
+        "      print(f\"  [w3] Step Size: {step_w3:.6f} | Old: {old_w3:.6f} | New: {new_w3:.6f}\")\n",
+        "\n",
+        "      old_w4 = w_out[1][0]\n",
+        "      w_out[1][0] = w_out[1][0] - step_w4\n",
+        "      new_w4 = w_out[1][0]\n",
+        "      print(f\"  [w3] Step Size: {step_w4:.6f} | Old: {old_w4:.6f} | New: {new_w4:.6f}\")\n",
+        "\n",
+        "      if abs(step_b3) < min_step_size and abs(step_w3) < min_step_size and abs(step_w4) < min_step_size:\n",
+        "        break\n",
+        "    if abs(step_b3) < min_step_size:\n",
+        "      break\n",
+        "\n",
+        "  return b_3, w_out\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "FwhCn7phV8yP"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "final_b3, final_w_out = training_neural_network(x_inputs, y_inputs, learning_rate=0.1, max_iterations=1000, min_step_size=0.0001, optimize_weights=False)"
+      ],
+      "metadata": {
+        "id": "ti9KgmFq-1rg"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
